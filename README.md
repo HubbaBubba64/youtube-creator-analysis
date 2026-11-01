@@ -1,491 +1,592 @@
 # YouTube Creator Analysis
 
-A data science and AI project that analyzes a large YouTube channel to understand the patterns behind its performance, content style, and creator characteristics.
+**A Data Science & AI Project for Understanding YouTube Performance and Creator Style**
 
-The current dataset is based on the **penguinz0** YouTube channel and contains metadata for more than 7,000 videos.
+An ongoing project that uses Python, SQL, and statistical analysis to investigate YouTube channel performance and identify patterns in successful content.
 
-The long-term goal is not only to analyze the channel, but also to use the collected data and analysis results to build a **creator-style chatbot** and **video script generator** using embeddings, retrieval, and large language models.
+The current implementation collects and analyzes over **7,000 YouTube videos**, examining video duration, title length, upload frequency, and view distribution.
+
+The long-term goal is to extend the analysis to transcripts, thumbnails, and language patterns, eventually developing a **Retrieval-Augmented Generation (RAG) chatbot and AI video script generator** that explore how well AI can reproduce measurable characteristics of a creator's communication style.
+
+## Project Overview
+
+Many YouTube creators develop recognizable styles through their language, video structure, topics, and presentation.
+
+But how much of that style can be measured through data?
+
+This project explores three questions:
+
+1. What patterns are associated with successful YouTube videos?
+2. Can a creator's content and communication style be described quantitatively?
+3. Can these findings support an AI system that generates responses and video scripts reflecting those characteristics?
+
+The project currently focuses on the **penguinz0 (MoistCr1TiKaL)** YouTube channel as a case study.
+
+The aim is not to claim that AI can perfectly reproduce a real person, but to investigate what can and cannot be learned from publicly available content.
+
+## Current Development Status
+
+**Status: In Progress — Data Collection & Exploratory Analysis**
+
+
+| Component                                  | Status      |
+| ------------------------------------------ | ----------- |
+| YouTube Data API integration               | Completed   |
+| Video metadata collection                  | Completed   |
+| CSV and SQLite storage                     | Completed   |
+| SQL-based channel statistics               | Completed   |
+| View distribution analysis                 | Completed   |
+| Upload frequency analysis                  | Completed   |
+| Video duration analysis                    | Completed   |
+| Title length analysis                      | Completed   |
+| Data visualization                         | Completed   |
+| Combined duration/title analysis           | In progress |
+| Thumbnail and transcript analysis          | Planned     |
+| Creator-style chatbot and script generator | Planned     |
+
+
+The data collection and analysis components have been implemented in Python. The generative AI components remain future development goals.
 
 ---
 
-## Project Goals
+## Technology Stack
 
-This project has three main stages:
 
-1. **Collect and analyze YouTube channel data**
-2. **Identify patterns in content, language, thumbnails, and performance**
-3. **Use those findings to build AI systems that can generate creator-style responses and video scripts**
+| Category        | Technologies             |
+| --------------- | ------------------------ |
+| Programming     | Python                   |
+| Data processing | pandas, NumPy            |
+| Database        | SQLite, SQL              |
+| Visualization   | matplotlib               |
+| Data collection | YouTube Data API v3      |
+| API integration | Google API Python Client |
+| Configuration   | python-dotenv            |
+| Development     | Git, GitHub              |
 
-The project is inspired by the idea that some characteristics of a successful YouTube channel can be studied quantitatively using data science and machine learning.
+
+### Planned Technologies
+
+For later AI development:
+
+- Hugging Face Transformers and sentence-transformers
+- NLP and text embeddings
+- Computer vision for thumbnail analysis
+- FAISS or Chroma for vector search
+- Retrieval-Augmented Generation (RAG)
+- Large Language Models (LLMs)
+- FastAPI or Flask for application APIs
+
+These technologies are part of the roadmap and are not yet implemented in this repository.
 
 ---
 
-## Current Progress
+# 1. Data Collection and Processing
 
-### 1. YouTube Data Collection
+## YouTube Data API Integration
 
-The YouTube Data API is used to collect video metadata from the channel.
+The project uses the YouTube Data API v3 to retrieve information about the target channel and its uploaded videos.
 
-The current dataset includes:
+Collected metadata includes:
 
-- Video ID
-- Video title
+- Video ID and title
 - Publication date
 - View count
-- Like count
-- Comment count
+- Like and comment counts
 - Video duration
 - Thumbnail URL
 
-More than **7,000 videos** have been collected and processed.
+### Collection Process
 
-The raw metadata is first stored in CSV format and then imported into a local SQLite database for analysis.
-
----
-
-### 2. Data Storage
-
-The project currently uses:
-
-- CSV for exported datasets
-- SQLite for structured local storage
-- SQL for querying the dataset
-
-The SQLite database makes it easier to analyze thousands of videos efficiently.
-
----
-
-### 3. Channel Scale Analysis
-
-The current analysis includes:
-
-- Total number of videos
-- Total channel views
-- Average views per video
-- Top-performing videos
-- Distribution of views across the video catalog
-- Upload frequency over time
-
-Current dataset results:
-
-- Videos analyzed: approximately **7,241**
-- Total views: approximately **13.66 billion**
-- Average views per video: approximately **1.89 million**
-
-One important result is that approximately **45.33% of the channel's videos account for 80% of total views**.
-
-This suggests that the channel's performance is not driven only by a small number of viral videos. A relatively large part of the video catalog contributes significantly to overall views.
-
----
-
-## Upload Frequency Analysis
-
-Upload frequency has also been analyzed by year.
-
-The data shows that the creator's upload frequency increased significantly over time.
-
-This supports the idea that consistency is an important characteristic of the channel.
-
----
-
-## Video Duration Analysis
-
-YouTube video durations are originally returned in ISO 8601 format, for example:
+The data pipeline follows this workflow:
 
 ```
-PT12M34S
-PT1H2M15S
+YouTube Data API
+       |
+       v
+Retrieve channel information
+       |
+       v
+Retrieve uploaded video IDs
+       |
+       v
+Fetch video metadata in batches
+       |
+       v
+Create pandas DataFrame
+       |
+       v
+Export to CSV
+       |
+       v
+Import into SQLite
+       |
+       v
+SQL queries and statistical analysis
+       |
+       v
+Visualization with matplotlib
 ```
 
-These values are converted into minutes so that they can be analyzed numerically.
+### Implementation Details
 
-Videos are currently grouped into the following ranges:
+**Pagination**
 
-- 0–5 minutes
-- 5–10 minutes
-- 10–15 minutes
-- 15–20 minutes
-- 20–30 minutes
-- 30–60 minutes
+YouTube playlist requests return a limited number of results per page.
 
-Current results show that videos around **15–20 minutes** have a relatively high average view count compared with other duration groups.
+The data collection script uses `nextPageToken` to iterate through the channel's upload playlist until all available video IDs have been retrieved.
 
-This is currently treated as a correlation rather than evidence that video length directly causes higher views.
+**Batch Requests**
 
----
+Rather than requesting metadata for each video separately, the implementation processes video IDs in batches of up to 50.
 
-## Title Length Analysis
+This reduces the number of API requests needed to retrieve metadata for thousands of videos.
 
-The project also analyzes the relationship between title length and video performance.
+**Environment Variables**
 
-Titles are grouped by character count:
+The YouTube API key is loaded from an environment variable using `python-dotenv` instead of being hardcoded in the source.
 
-- 0–20 characters
-- 20–30 characters
-- 30–40 characters
-- 40–50 characters
-- 50–60 characters
-- 60–80 characters
-- 80–120 characters
+## Data Storage
 
-Current results show that titles around **20–30 characters** tend to have relatively high average views.
-
-Again, this is treated as a correlation rather than a causal relationship.
-
----
-
-## Combined Packaging Analysis
-
-The next step is to combine:
-
-- Video duration
-- Title length
-- Average views
-
-into a two-dimensional heatmap.
-
-This will help identify whether particular combinations of title length and video duration are associated with stronger performance.
-
----
-
-# Future Development
-
-## 1. Thumbnail Analysis
-
-The project will analyze thumbnails using computer vision techniques.
-
-Planned approaches include:
-
-- Image downloading and preprocessing
-- Color distribution analysis
-- RGB histogram comparison
-- Spatial image segmentation
-- Image embeddings
-- Similarity analysis
-- Identification of representative thumbnail styles
-
-The goal is to understand whether the creator uses recurring visual patterns and whether those patterns are associated with video performance.
-
----
-
-## 2. Transcript Collection
-
-Video transcripts will be collected and connected to the corresponding video metadata.
-
-The future database structure will contain both:
+The collected metadata is exported to CSV and then imported into a local SQLite database.
 
 ```
-videos
+data/
+  videos.csv
+  videos.db
 ```
 
-and:
+SQLite is used to organize records and execute queries for channel statistics, rankings, and exploratory analysis.
+
+The database is generated locally and is not committed to GitHub.
+
+---
+
+# 2. Exploratory Data Analysis
+
+The current analysis examines the relationship between video characteristics and channel performance.
+
+## 2.1 Channel Overview
+
+The analyzed dataset contains approximately 7,241 videos.
+
+
+| Metric                  | Recorded result |
+| ----------------------- | --------------- |
+| Videos analyzed         | 7,241           |
+| Total video views       | 13.66 billion   |
+| Average views per video | 1.89 million    |
+
+
+These figures describe a snapshot of the collected dataset. They are not live channel statistics and will change if the dataset is refreshed.
+
+## 2.2 View Distribution Analysis
+
+**Research question:** How much of the channel's total view count comes from its highest-performing videos?
+
+Videos are sorted by view count, and cumulative views are calculated to examine the distribution of audience attention.
+
+**Result:** Approximately 45.33% of the analyzed videos account for 80% of the dataset's total views.
+
+This suggests that the channel's accumulated views are distributed across a substantial portion of its video catalog, rather than being concentrated in only a very small number of viral videos.
+
+The result is specific to the analyzed dataset and does not establish a general pattern for YouTube channels.
+
+## 2.3 Upload Frequency Analysis
+
+**Research question:** How has the creator's upload frequency changed over time?
+
+Publication dates are converted into datetime values and grouped by year to calculate annual upload counts.
+
+The analysis shows that upload frequency increased substantially during the channel's development.
+
+This provides a basis for investigating the relationship between publishing consistency and channel performance.
+
+However, upload frequency alone cannot establish what caused changes in viewership.
+
+## 2.4 Video Duration Analysis
+
+**Research question:** Are certain video lengths associated with higher average views?
+
+The YouTube Data API returns video durations in ISO 8601 format.
+
+For example:
 
 ```
-transcripts
+PT12M34S  → 12.57 minutes
+PT1H2M15S → 62.25 minutes
 ```
 
-linked using the video ID.
+The analysis script converts these durations into numerical minutes and groups videos into ranges.
 
-This will allow analysis of what the creator actually says rather than only analyzing video metadata.
 
----
+| Duration group |
+| -------------- |
+| 0–5 minutes    |
+| 5–10 minutes   |
+| 10–15 minutes  |
+| 15–20 minutes  |
+| 20–30 minutes  |
+| 30–60 minutes  |
 
-## 3. Topic Analysis
 
-Natural language processing will be used to identify the main topics discussed across thousands of videos.
+Videos longer than 60 minutes are excluded from the grouped duration comparison, although they can still appear in the overall duration scatter plot.
 
-Possible methods include:
+**Preliminary finding:** Videos around 15–20 minutes show relatively high average views in the analyzed dataset.
 
-- Keyword extraction
-- Text embeddings
-- Clustering
-- Transformer-based classification
-- LLM-based topic classification
+This is an observed association, not evidence that making a video a particular length will cause more views.
 
-The project will then compare topic categories with video performance.
+## 2.5 Title Length Analysis
 
----
+**Research question:** Is video title length associated with video performance?
 
-## 4. Emotion Analysis
+Title lengths are calculated using Python and compared with view counts.
 
-The transcripts will also be analyzed for emotional tone.
+Titles are also grouped into character-length ranges to compare average views.
 
-Potential categories may include:
+**Preliminary finding:** Titles around 20–30 characters have relatively high average views compared with several other groups in the current dataset.
 
-- Amusement
-- Anger
-- Outrage
-- Mockery
-- Positivity
-- Negativity
-- Surprise
+This pattern may be influenced by topic, publication date, audience size at the time of upload, and other factors.
 
-The goal is to investigate whether particular emotional patterns are associated with stronger video performance.
+### Title Length vs. Views
 
----
 
-## 5. Language Style Analysis
 
-The project will analyze characteristics of the creator's speaking style.
+*Figure 1. Scatter plot examining the relationship between video title length and view count.*
 
-Planned features include:
+### Average Views by Title Length
 
-- Sentence length
-- Vocabulary complexity
-- Reading level
-- Profanity frequency
-- Sarcasm
-- Exaggeration
-- Non-literal language
-- Repeated expressions
-- Language predictability
 
-This analysis will later be used to create a structured **creator style profile**.
+
+*Figure 2. Comparison of average views across title-length groups.*
 
 ---
 
-## 6. Perplexity and Predictability Analysis
+# 3. Technical Challenges and Solutions
 
-Transformer models may be used to study how predictable the creator's language is.
+## Challenge 1: Collecting Thousands of Video Records
 
-Next-token probabilities can be used to estimate whether the creator tends to use predictable language or frequently produces unexpected phrases and expressions.
+**Problem**
 
-This may help quantify characteristics such as humor, absurdity, or unpredictability.
+The YouTube Data API limits the number of items returned by individual requests, making large-scale collection difficult using a single request.
 
----
+**Approach**
 
-# Creator-Style AI System
+I implemented pagination to retrieve video IDs across multiple pages, then organized the metadata requests into batches.
 
-The final stage of the project is to move from analysis to generation.
+This allowed the collection process to handle thousands of videos without requiring a separate metadata request for every video.
 
-## 1. Transcript Chunking
+## Challenge 2: Converting Video Durations into Usable Data
 
-Collected transcripts will be divided into smaller text chunks.
+**Problem**
 
-Example:
+The API provides durations as ISO 8601 strings rather than directly usable numerical values.
 
-```
-Video transcript
-↓
-Chunk 1
-Chunk 2
-Chunk 3
-...
-```
+**Approach**
 
-Each chunk will represent a small section of something the creator previously said.
+I implemented a Python function using regular expressions to extract hours, minutes, and seconds and convert them into minutes.
 
----
+This made it possible to perform numerical comparisons, group videos by duration, and generate visualizations.
 
-## 2. Embeddings
+## Challenge 3: Analyzing and Interpreting View Distribution
 
-Each transcript chunk will be converted into a numerical embedding using an embedding model.
+**Problem**
 
-The embeddings represent the semantic meaning of the text.
+Simple averages do not explain how total views are distributed across a channel's entire video catalog.
 
-Possible tools include:
+**Approach**
 
-- sentence-transformers
-- Hugging Face Transformers
-- embedding APIs
+I sorted videos by view count, calculated cumulative view totals, and identified the proportion of videos contributing to 80% of overall views.
 
----
+This made it possible to investigate whether channel performance is concentrated in a small number of highly successful videos or distributed more broadly.
 
-## 3. Vector Database
+## Challenge 4: Separating Correlation from Causation
 
-The embeddings will be stored in a vector database.
+**Problem**
 
-Possible technologies include:
+A relationship between video characteristics and views does not necessarily mean that those characteristics cause higher performance.
 
-- FAISS
-- Chroma
+**Approach**
 
-This will allow fast similarity searches across thousands of transcript chunks.
+I treat findings from duration and title analysis as exploratory correlations rather than causal conclusions.
+
+Future analysis will consider additional variables such as publication year, topic, engagement, and channel growth.
 
 ---
 
-## 4. Retrieval-Augmented Generation
-
-The project will use a Retrieval-Augmented Generation (RAG) architecture.
-
-The planned workflow is:
-
-```
-User question
-↓
-Convert question to embedding
-↓
-Search vector database
-↓
-Retrieve relevant past creator statements
-↓
-Combine retrieved statements with creator style profile
-↓
-Send context to an LLM
-↓
-Generate response
-```
-
-This allows the model to reference relevant things the creator has actually said instead of relying only on a general prompt.
-
----
-
-## 5. Creator-Style Chatbot
-
-The first generative AI application will be a chatbot.
-
-The chatbot will combine:
-
-- Relevant historical statements
-- Creator language patterns
-- Emotional tendencies
-- Vocabulary
-- Sarcasm and exaggeration patterns
-- Example responses
-
-The goal is to generate responses that resemble the creator's communication style while still being grounded in retrieved transcript data.
-
----
-
-## 6. Video Script Generator
-
-A second system will generate complete video scripts.
-
-The user will provide a topic, for example:
-
-```
-Topic:
-A new AI product launch
-```
-
-The system will:
-
-```
-Topic
-↓
-Retrieve related creator statements
-↓
-Apply creator style profile
-↓
-Generate structured script
-```
-
-The generated output will then be evaluated against real video transcripts.
-
----
-
-# Evaluation
-
-The project will not assume that an AI system can fully recreate a human creator.
-
-The final evaluation will investigate:
-
-- How similar generated language is to real transcripts
-- Whether vocabulary and sentence structure match
-- Whether emotional tone is similar
-- Whether sarcasm and exaggeration are reproduced naturally
-- Whether generated scripts have coherent structure
-- Where AI-generated imitation becomes unnatural or forced
-
-An important research question is:
-
-> How much of a creator's style can be reconstructed from their public content, and what aspects cannot be captured from data alone?
-
----
-
-# Technologies
-
-Current technologies:
-
-- Python
-- pandas
-- SQLite
-- SQL
-- matplotlib
-- YouTube Data API
-- python-dotenv
-- Google API Python Client
-
-Planned technologies:
-
-- Hugging Face Transformers
-- sentence-transformers
-- LLM APIs or local LLMs
-- FAISS or Chroma
-- RAG
-- NLP
-- Computer Vision
-- FastAPI or Flask
-
----
-
-# Project Structure
+# 4. Project Structure
 
 ```
 youtube_creator_analysis/
-│
-├── data/
-│   ├── videos.csv
-│   └── youtube.db
-│
-├── notebooks/
-│
+|
 ├── src/
 │   ├── test_youtube_api.py
 │   ├── create_database.py
+│   ├── check_database.py
 │   └── analyze_channel.py
 │
-├── .env
-├── .gitignore
+├── README.md
 ├── requirements.txt
-└── README.md
+├── .gitignore
+│
+├── Figure_1.png
+├── Figure_2.png
+├── Figure_3.png
+├── Figure_4.png
+├── Figure_5.png
+│
+└── ...additional analysis figures
 ```
 
-The `data/`, `.env`, and `.venv/` directories/files are excluded from GitHub using `.gitignore`.
+The project generates its local `data/` directory during setup.
+
+The `data/`, `.env`, and `.venv/` paths are ignored by Git to avoid committing local datasets, secrets, and virtual environments.
 
 ---
 
-# Current Status
+# 5. Running the Project Locally
 
-The project is currently **in progress**.
+## Requirements
 
-Completed:
+- Python 3
+- YouTube Data API v3 key
+- Installed project dependencies
 
-- YouTube API setup
-- Channel metadata collection
-- Collection of 7,000+ video records
-- CSV storage
-- SQLite database creation
-- SQL analysis
-- View distribution analysis
-- Upload frequency analysis
-- Video duration analysis
-- Title length analysis
-- Data visualization
+## Step 1 — Clone the Repository
 
-In progress:
+```
+git clone https://github.com/HubbaBubba64/youtube-creator-analysis.git
+cd youtube-creator-analysis
+```
 
-- Combined duration/title analysis
-- Packaging analysis
+## Step 2 — Create a Virtual Environment
 
-Planned:
+```
+python -m venv .venv
+```
 
-- Thumbnail analysis
-- Transcript collection
-- Topic analysis
-- Emotion analysis
-- Language style analysis
-- Embeddings
-- Vector search
-- RAG
-- Creator-style chatbot
-- Video script generator
-- Evaluation
+On Windows PowerShell:
+
+```
+.\.venv\Scripts\Activate.ps1
+```
+
+On macOS/Linux:
+
+```
+source .venv/bin/activate
+```
+
+## Step 3 — Install Dependencies
+
+```
+pip install -r requirements.txt
+```
+
+## Step 4 — Configure Your API Key
+
+Create a `.env` file in the project root:
+
+```
+YOUTUBE_API_KEY=your_youtube_api_key_here
+```
+
+Do not commit your API key to GitHub.
+
+## Step 5 — Create the Data Directory
+
+```
+mkdir data
+```
+
+## Step 6 — Collect YouTube Data
+
+```
+python src/test_youtube_api.py
+```
+
+This script retrieves channel metadata, collects uploaded video IDs, fetches video metadata, and saves the collected records to:
+
+```
+data/videos.csv
+```
+
+Running the collection requires access to the YouTube Data API and uses API quota.
+
+## Step 7 — Create the SQLite Database
+
+```
+python src/create_database.py
+```
+
+This imports the CSV data into:
+
+```
+data/videos.db
+```
+
+To check the number of stored videos:
+
+```
+python src/check_database.py
+```
+
+## Step 8 — Run the Analysis
+
+```
+python src/analyze_channel.py
+```
+
+The script executes SQL queries and displays statistical results and matplotlib visualizations.
+
+Run these commands from the project root directory because the scripts use relative paths to access local data.
 
 ---
 
-## Important Note
+# 6. Future Development Roadmap
 
-This project is intended as a data science and AI learning project.
+The next stages will gradually extend the project from metadata analysis to AI-based language understanding and generation.
 
-The goal is to study measurable patterns in public YouTube content and explore the capabilities and limitations of AI-based creator-style generation, not to claim that an AI system can fully reproduce the real person behind the channel.
+## Phase 1 — Expanded Performance Analysis
+
+**Next milestone**
+
+- Combine title length and video duration into a two-dimensional heatmap
+- Compare engagement indicators such as likes and comments
+- Examine trends by publication year
+- Investigate additional variables that may influence view performance
+
+## Phase 2 — Thumbnail Analysis
+
+**Planned**
+
+Apply computer vision methods to study recurring visual patterns.
+
+Potential approaches include color histograms, image embeddings, and similarity comparisons.
+
+The objective is to determine whether the channel uses identifiable thumbnail styles and how those characteristics relate to video performance.
+
+## Phase 3 — Transcript and Language Analysis
+
+**Planned**
+
+Collect available transcripts and connect them to video records through video IDs.
+
+Analyze:
+
+- Common topics and keywords
+- Vocabulary and sentence structure
+- Emotional tone
+- Repeated expressions
+- Language complexity
+- Sarcasm and exaggeration patterns
+
+The results will be used to build a structured description of the creator's communication style.
+
+## Phase 4 — Creator-Style AI System
+
+**Planned**
+
+Build an experimental RAG system using available transcripts and a language model.
+
+### Proposed Architecture
+
+```
+YouTube Transcripts
+        |
+        v
+Text Cleaning and Chunking
+        |
+        v
+Embedding Model
+        |
+        v
+Vector Database
+        |
+        v
+Semantic Search
+        |
+        v
+Retrieve Relevant Excerpts
+        |
+        v
+Creator Style Profile + LLM
+        |
+        v
+Generated Response or Script
+```
+
+The system will have two primary applications.
+
+**Creator-Style Chatbot**
+
+A chatbot that retrieves relevant source material and attempts to generate responses reflecting measurable characteristics of the creator's public communication style.
+
+**AI Video Script Generator**
+
+A tool that accepts a video topic and produces a structured draft using retrieved content and the creator-style profile.
+
+Generated outputs will be identified as AI-generated, not authentic statements by the creator.
+
+## Phase 5 — Evaluation
+
+**Planned**
+
+Evaluate the generated content using several criteria:
+
+- Semantic relevance to the user request
+- Faithfulness to retrieved sources
+- Vocabulary and sentence-structure similarity
+- Style consistency
+- Coherence and readability
+- Unsupported or fabricated claims
+
+A central research question is:
+
+**How accurately can AI reconstruct measurable elements of a creator's communication style, and which aspects remain difficult to reproduce?**
+
+---
+
+# 7. Limitations
+
+This is an exploratory research and development project.
+
+Current limitations include:
+
+- Analysis of one selected YouTube channel
+- Historical statistics that change as video counts and engagement metrics evolve
+- Possible confounding factors such as publication date, topic, and audience growth
+- No established causal relationship between title length, duration, and views
+- No transcript-based or AI-generated functionality in the current implementation
+- Locally stored datasets that are not included in the public repository
+
+Future improvements will address data reproducibility, model evaluation, and analysis across additional channels.
+
+---
+
+# 8. Key Learning Outcomes
+
+Through this project, I have practiced:
+
+- Integrating an external REST API using Python
+- Handling pagination and batch data collection
+- Processing and organizing thousands of records
+- Using SQLite and SQL for exploratory data analysis
+- Transforming raw metadata into numerical features
+- Visualizing statistical relationships using matplotlib
+- Interpreting analytical results and recognizing limitations
+- Designing a longer-term data and AI application architecture
+
+The project has strengthened my interest in combining data engineering, machine learning, and practical AI development to build applications based on real-world data.
+
+---
+
+## Project Status
+
+**Ongoing personal development project**
+
+Current focus: Improving multivariable video-performance analysis before moving into transcript processing and language modeling.
+
+**Repository:** [https://github.com/HubbaBubba64/youtube-creator-analysis](https://github.com/HubbaBubba64/youtube-creator-analysis)
+
+**License:** No license file is currently included in this repository.
+
