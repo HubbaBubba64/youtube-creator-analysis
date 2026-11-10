@@ -18,7 +18,7 @@ def duration_to_minutes(duration):
 
     return total_minutes
 
-connection = sqlite3.connect("data/videos.db")
+connection = sqlite3.connect("../data/videos.db")
 
 query = """
 SELECT COUNT(*) AS total_videos
@@ -345,5 +345,106 @@ plt.grid(axis="y")
 
 plt.show()
 
+query = """
+SELECT title, view_count, duration
+FROM videos
+
+"""
+
+heatmap_df = pd.read_sql_query(query, connection)
+
+heatmap_df["duration_minutes"] = heatmap_df["duration"].apply(
+    duration_to_minutes
+)
+
+heatmap_df["title_length"] = heatmap_df["title"].str.len()
+
+heatmap_df = heatmap_df[
+    (heatmap_df["duration_minutes"] <= 60) &
+    (heatmap_df["title_length"] <= 80)
+].copy()
+
+duration_bins = [0, 5, 10, 15, 20, 30, 60]
+
+duration_labels = [
+    "0-5",
+    "5-10",
+    "10-15",
+    "15-20",
+    "20-30",
+    "30-60"
+]
+
+title_bins = [0, 20, 30, 40, 50, 60, 80]
+
+title_labels = [
+    "0-20",
+    "20-30",
+    "30-40",
+    "40-50",
+    "50-60",
+    "60-80"
+]
+
+heatmap_df["duration_group"] = pd.cut(
+    heatmap_df["duration_minutes"],
+    bins=duration_bins,
+    labels=duration_labels
+)
+
+heatmap_df["title_group"] = pd.cut(
+    heatmap_df["title_length"],
+    bins=title_bins,
+    labels=title_labels
+)
+
+heatmap_data = heatmap_df.pivot_table(
+    values="view_count",
+    index="duration_group",
+    columns="title_group",
+    aggfunc="mean",
+    observed=True
+)
+
+print("\nAVERAGE VIEWS BY DURATION + TITLE LENGTH")
+print(heatmap_data)
+
+count_data = heatmap_df.pivot_table(
+    values="view_count",
+    index="duration_group",
+    columns="title_group",
+    aggfunc="count",
+    observed=True
+)
+
+print("\nNUMBER OF VIDEOS IN EACH GROUP")
+print(count_data)
+
+plt.figure(figsize=(10, 6))
+
+plt.imshow(
+    heatmap_data,
+    aspect="auto",
+)
+
+plt.colorbar(
+    label="Average Views"
+)
+
+plt.xticks(
+    range(len(heatmap_data.columns)),
+    heatmap_data.columns
+)
+
+plt.yticks(
+    range(len(heatmap_data.index)),
+    heatmap_data.index
+)
+
+plt.xlabel("Title Length (characters)")
+plt.ylabel("Duration (minutes)")
+plt.title("Average Views by Duration + Title Length - penguinz0")
+
+plt.show()
 
 connection.close()
